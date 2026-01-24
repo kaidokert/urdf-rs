@@ -13,6 +13,10 @@ keywords = ["robotics", "robot", "ros", "urdf"]
 categories = ["data-structures", "parsing"]
 repository = "https://github.com/openrr/urdf-rs"
 
+[features]
+default = []
+rust-xacro = ["dep:xacro-rs"]
+
 # Note: serde is public dependency.
 [dependencies]
 quick-xml = { version = "0.39", features = ["overlapped-lists", "serialize"] }
@@ -21,6 +25,7 @@ RustyXML = "0.3.0"
 serde = { version = "1.0.118", features = ["derive"] }
 serde-xml-rs = "0.6.0"
 thiserror = "2.0.0"
+xacro-rs = { package = "xacro", version = "0.1.3", git = "https://github.com/kaidokert/xacro/", branch = "main", optional = true }
 
 [dev-dependencies]
 assert_approx_eq = "1"
@@ -36,3 +41,6 @@ single_use_lifetimes = "warn"
 unreachable_pub = "warn"
 [workspace.lints.clippy]
 lint_groups_priority = { level = "allow", priority = 1 } # https://github.com/rust-lang/rust-clippy/issues/12920
+
+[patch.crates-io]
+pyisheval = { git = "https://github.com/kaidokert/pyisheval", tag = "v0.16.0_with_in_operator" }
