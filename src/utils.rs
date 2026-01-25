@@ -12,11 +12,7 @@ use std::env;
 use std::fs;
 
 #[cfg(feature = "rust-xacro")]
-use std::cell::RefCell;
-#[cfg(feature = "rust-xacro")]
-use std::collections::HashMap;
-#[cfg(feature = "rust-xacro")]
-use std::path::PathBuf;
+use std::{cell::RefCell, collections::HashMap, path::PathBuf};
 
 // TODO: This is a hack, re-work this with either a better interface or simply
 // read the file twice.
