@@ -55,7 +55,7 @@ where
         {
             let found_packages = find_ext.get_found_packages();
             FOUND_PACKAGES.with(|packages| {
-                packages.borrow_mut().clone_from(&found_packages);
+                packages.borrow_mut().extend(found_packages);
             });
             break;
         }
@@ -116,10 +116,15 @@ pub fn rospack_find(package: &str) -> Result<String> {
     // 2. Check ROS_PACKAGE_PATH
     if let Ok(ros_path) = env::var("ROS_PACKAGE_PATH") {
         let check_package_name = |dir: &std::path::Path| -> Option<String> {
-            fs::read_to_string(dir.join("package.xml"))
-                .ok()
-                .filter(|content| content.contains(&format!("<name>{}</name>", package)))
-                .map(|_| dir.to_string_lossy().to_string())
+            let content = fs::read_to_string(dir.join("package.xml")).ok()?;
+            // Match <name>pkg</name> with optional whitespace
+            let pattern = format!(r"<name>\s*{}\s*</name>", regex::escape(package));
+            let re = Regex::new(&pattern).ok()?;
+            if re.is_match(&content) {
+                Some(dir.to_string_lossy().to_string())
+            } else {
+                None
+            }
         };
 
         if let Some(found) = env::split_paths(&ros_path)
