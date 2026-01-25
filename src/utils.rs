@@ -142,6 +142,10 @@ pub fn rospack_find(package: &str) -> Result<String> {
                     })
             })
         {
+            #[cfg(feature = "rust-xacro")]
+            FOUND_PACKAGES.with(|packages| {
+                packages.borrow_mut().insert(package.to_string(), PathBuf::from(&found));
+            });
             return Ok(found);
         }
     }
