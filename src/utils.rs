@@ -40,19 +40,13 @@ where
     })?;
 
     // Extract found packages from FindExtension and cache them for later use
-    let extensions = processor.extensions();
-    for ext in extensions.iter() {
-        if let Some(find_ext) = ext
-            .as_any()
+    if let Some(find_ext) = processor.extensions().iter().find_map(|ext| {
+        ext.as_any()
             .downcast_ref::<xacro_rs::extensions::FindExtension>()
-        {
-            let found_packages = find_ext.get_found_packages();
-            FOUND_PACKAGES
-                .lock()
-                .unwrap()
-                .extend(found_packages);
-            break;
-        }
+    }) {
+        let found_packages = find_ext.get_found_packages();
+        let mut packages = FOUND_PACKAGES.lock().unwrap_or_else(|e| e.into_inner());
+        packages.extend(found_packages);
     }
 
     Ok(result)
@@ -101,7 +95,11 @@ pub fn rospack_find(package: &str) -> Result<String> {
     // Check process-wide cache from xacro processing
     #[cfg(feature = "rust-xacro")]
     {
-        let cached_path = FOUND_PACKAGES.lock().unwrap().get(package).cloned();
+        let cached_path = FOUND_PACKAGES
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(package)
+            .cloned();
         if let Some(path) = cached_path {
             return Ok(path.to_string_lossy().to_string());
         }
