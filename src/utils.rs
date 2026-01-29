@@ -163,7 +163,7 @@ pub fn rospack_find(package: &str) -> Result<String> {
                 .output()
         })
         .map_err(|e| {
-            format!("failed to execute neither `rospack` nor `ros2 pkg`; consider installing ROS or setting ROS_PACKAGE_PATH: {e}")
+            format!("failed to execute neither `rospack` nor `ros2 pkg`; consider installing ROS or replacing 'package://' with path: {e}")
         })?;
     if output.status.success() {
         Ok(String::from_utf8(output.stdout)?.trim().to_string())
