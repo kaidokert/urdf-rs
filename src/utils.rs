@@ -8,18 +8,14 @@ use std::path::Path;
 use std::process::Command;
 use std::sync::LazyLock;
 
-use std::env;
-use std::fs;
-
 #[cfg(feature = "rust-xacro")]
-use std::{cell::RefCell, collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf, sync::Mutex};
 
 // TODO: This is a hack, re-work this with either a better interface or simply
 // read the file twice.
 #[cfg(feature = "rust-xacro")]
-thread_local! {
-    static FOUND_PACKAGES: RefCell<HashMap<String, PathBuf>> = RefCell::new(HashMap::new());
-}
+static FOUND_PACKAGES: LazyLock<Mutex<HashMap<String, PathBuf>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
 
 #[cfg(feature = "rust-xacro")]
 pub fn convert_xacro_to_urdf_with_args<P>(filename: P, args: &[(String, String)]) -> Result<String>
@@ -27,10 +23,7 @@ where
     P: AsRef<Path>,
 {
     let filename = filename.as_ref();
-    let mut params = std::collections::HashMap::new();
-    for (k, v) in args {
-        params.insert(k.clone(), v.clone());
-    }
+    let params: HashMap<String, String> = args.iter().cloned().collect();
 
     let processor = xacro_rs::XacroProcessor::builder()
         .with_args(params)
@@ -54,9 +47,10 @@ where
             .downcast_ref::<xacro_rs::extensions::FindExtension>()
         {
             let found_packages = find_ext.get_found_packages();
-            FOUND_PACKAGES.with(|packages| {
-                packages.borrow_mut().extend(found_packages);
-            });
+            FOUND_PACKAGES
+                .lock()
+                .unwrap()
+                .extend(found_packages);
             break;
         }
     }
@@ -104,10 +98,10 @@ where
 }
 
 pub fn rospack_find(package: &str) -> Result<String> {
-    // Check thread-local cache from xacro processing
+    // Check process-wide cache from xacro processing
     #[cfg(feature = "rust-xacro")]
     {
-        let cached_path = FOUND_PACKAGES.with(|packages| packages.borrow().get(package).cloned());
+        let cached_path = FOUND_PACKAGES.lock().unwrap().get(package).cloned();
         if let Some(path) = cached_path {
             return Ok(path.to_string_lossy().to_string());
         }
