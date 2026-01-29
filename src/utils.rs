@@ -104,7 +104,7 @@ where
 }
 
 pub fn rospack_find(package: &str) -> Result<String> {
-    // 1. Check thread-local cache from xacro processing (if rust-xacro feature enabled)
+    // Check thread-local cache from xacro processing
     #[cfg(feature = "rust-xacro")]
     {
         let cached_path = FOUND_PACKAGES.with(|packages| packages.borrow().get(package).cloned());
@@ -113,44 +113,6 @@ pub fn rospack_find(package: &str) -> Result<String> {
         }
     }
 
-    // 2. Check ROS_PACKAGE_PATH
-    if let Ok(ros_path) = env::var("ROS_PACKAGE_PATH") {
-        let check_package_name = |dir: &std::path::Path| -> Option<String> {
-            let content = fs::read_to_string(dir.join("package.xml")).ok()?;
-            // Match <name>pkg</name> with optional whitespace
-            let pattern = format!(r"<name>\s*{}\s*</name>", regex::escape(package));
-            let re = Regex::new(&pattern).ok()?;
-            if re.is_match(&content) {
-                Some(dir.to_string_lossy().to_string())
-            } else {
-                None
-            }
-        };
-
-        if let Some(found) = env::split_paths(&ros_path)
-            .filter(|path| path.exists())
-            .find_map(|path| {
-                // Check if this directory itself is the package
-                check_package_name(&path)
-                    // Or check subdirectories
-                    .or_else(|| {
-                        fs::read_dir(&path)
-                            .ok()?
-                            .flatten()
-                            .filter(|e| e.path().is_dir())
-                            .find_map(|entry| check_package_name(&entry.path()))
-                    })
-            })
-        {
-            #[cfg(feature = "rust-xacro")]
-            FOUND_PACKAGES.with(|packages| {
-                packages.borrow_mut().insert(package.to_string(), PathBuf::from(&found));
-            });
-            return Ok(found);
-        }
-    }
-
-    // 3. Fall back to rospack/ros2 commands
     let output = Command::new("rospack")
         .arg("find")
         .arg(package)
